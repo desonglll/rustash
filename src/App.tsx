@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface Video {
   id: number;
@@ -25,6 +26,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showScanForm, setShowScanForm] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [newVideo, setNewVideo] = useState({ title: "", path: "" });
   const [scanPath, setScanPath] = useState("");
   const [scannedFiles, setScannedFiles] = useState<ScannedFile[]>([]);
@@ -70,6 +72,14 @@ function App() {
     } catch (err) {
       console.error("Failed to delete video:", err);
     }
+  };
+
+  const handlePlayVideo = (video: Video) => {
+    setCurrentVideo(video);
+  };
+
+  const handleClosePlayer = () => {
+    setCurrentVideo(null);
   };
 
   const handleSelectFolder = async () => {
@@ -157,6 +167,32 @@ function App() {
           </div>
         </div>
       </header>
+
+      {/* Video Player Modal */}
+      {currentVideo && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+          <div className="w-full max-w-5xl mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">{currentVideo.title}</h2>
+              <button
+                onClick={handleClosePlayer}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <video
+              key={currentVideo.id}
+              src={convertFileSrc(currentVideo.path)}
+              controls
+              autoPlay
+              className="w-full rounded-lg bg-black"
+            >
+              Your browser does not support video playback.
+            </video>
+          </div>
+        </div>
+      )}
 
       {/* Scan Form */}
       {showScanForm && (
@@ -295,7 +331,7 @@ function App() {
                     ✕
                   </button>
                 </div>
-                <div className="mt-3 flex gap-4 text-sm text-gray-500">
+                <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                   <span>{formatSize(video.size)}</span>
                   {video.width && video.height && (
                     <span>{video.width} × {video.height}</span>
@@ -304,6 +340,12 @@ function App() {
                     <span>{Math.floor(video.duration / 60)}:{String(Math.floor(video.duration % 60)).padStart(2, "0")}</span>
                   )}
                 </div>
+                <button
+                  onClick={() => handlePlayVideo(video)}
+                  className="mt-3 w-full py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  ▶ Play
+                </button>
               </div>
             ))}
           </div>
