@@ -26,4 +26,7 @@ tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio", "migrate"] }
 log = "0.4"
 env_logger = "0.11"
+walkdir = "2"
+regex = "1"
+tauri-plugin-dialog = "2.7.1"
 

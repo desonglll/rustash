@@ -2,9 +2,11 @@
 mod db;
 mod models;
 mod schema;
+mod scanner;
 
 use db::{create_db_pool, init_database};
 use models::{CreateTagInput, CreateVideoInput, Video, Tag};
+use scanner::{ScanResult, extract_title};
 use tauri::Manager;
 
 pub type DbPool = db::DbPool;
@@ -132,6 +134,51 @@ async fn remove_tag_from_video(pool: tauri::State<'_, DbPool>, video_id: i64, ta
     Ok(())
 }
 
+/// Scan directory for video files
+#[tauri::command]
+async fn scan_directory(path: String) -> Result<ScanResult, String> {
+    scanner::scan_directory(&path)
+}
+
+/// Import scanned files as videos
+#[tauri::command]
+async fn import_scanned_files(pool: tauri::State<'_, DbPool>, files: Vec<String>) -> Result<Vec<Video>, String> {
+    let pool = pool.lock().await;
+    let mut imported = Vec::new();
+
+    for file_path in files {
+        let title = scanner::extract_title(&file_path);
+        let size = std::fs::metadata(&file_path)
+            .map(|m| m.len() as i64)
+            .unwrap_or(0);
+
+        // Insert or ignore if already exists
+        let result = sqlx::query(
+            "INSERT OR IGNORE INTO videos (title, path, size) VALUES (?, ?, ?)"
+        )
+        .bind(&title)
+        .bind(&file_path)
+        .bind(size)
+        .execute(&*pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        if result.rows_affected() > 0 {
+            // Get the inserted video
+            let video = sqlx::query_as::<_, Video>(
+                "SELECT * FROM videos WHERE path = ?"
+            )
+            .bind(&file_path)
+            .fetch_one(&*pool)
+            .await
+            .map_err(|e| e.to_string())?;
+            imported.push(video);
+        }
+    }
+
+    Ok(imported)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
@@ -139,6 +186,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir().expect("Failed to get app data dir");
 
@@ -161,7 +209,9 @@ pub fn run() {
             add_tag,
             delete_tag,
             add_tag_to_video,
-            remove_tag_from_video
+            remove_tag_from_video,
+            scan_directory,
+            import_scanned_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
