@@ -4,11 +4,13 @@ mod models;
 mod schema;
 mod scanner;
 mod ffmpeg;
+mod settings;
 
 use db::{create_db_pool, init_database};
 use models::{CreateTagInput, CreateVideoInput, Video, Tag};
 use scanner::{ScanResult, extract_title};
 use ffmpeg::VideoMetadata;
+use settings::Settings;
 use tauri::Manager;
 
 pub type DbPool = db::DbPool;
@@ -193,6 +195,20 @@ fn check_ffmpeg() -> bool {
     ffmpeg::is_ffmpeg_available()
 }
 
+/// Get settings
+#[tauri::command]
+async fn get_settings(pool: tauri::State<'_, DbPool>) -> Result<Settings, String> {
+    let pool = pool.lock().await;
+    settings::get_settings(&pool).await
+}
+
+/// Save settings
+#[tauri::command]
+async fn save_settings(pool: tauri::State<'_, DbPool>, settings: Settings) -> Result<(), String> {
+    let pool = pool.lock().await;
+    settings::save_settings(&pool, &settings).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
@@ -227,7 +243,9 @@ pub fn run() {
             scan_directory,
             import_scanned_files,
             get_video_metadata,
-            check_ffmpeg
+            check_ffmpeg,
+            get_settings,
+            save_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

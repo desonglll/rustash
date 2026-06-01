@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import Player from "xgplayer";
 
 interface Video {
   id: number;
@@ -28,13 +29,21 @@ interface VideoMetadata {
   bitrate: number | null;
 }
 
+interface Settings {
+  ffmpegPath: string;
+}
+
 function App() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showScanForm, setShowScanForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [hasFfmpeg, setHasFfmpeg] = useState(false);
+  const [settings, setSettings] = useState<Settings>({
+    ffmpegPath: "",
+  });
   const playerRef = useRef<HTMLDivElement>(null);
   const playerInstanceRef = useRef<Player | null>(null);
   const [newVideo, setNewVideo] = useState({ title: "", path: "" });
@@ -42,10 +51,12 @@ function App() {
   const [scannedFiles, setScannedFiles] = useState<ScannedFile[]>([]);
   const [scanning, setScanning] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
 
   useEffect(() => {
     loadVideos();
     checkFfmpeg();
+    loadSettings();
   }, []);
 
   // Cleanup player on unmount
@@ -63,27 +74,66 @@ function App() {
       // Destroy existing player
       if (playerInstanceRef.current) {
         playerInstanceRef.current.destroy();
+        playerInstanceRef.current = null;
       }
 
-      // Create new player with xgplayer
-      playerInstanceRef.current = new Player({
-        el: playerRef.current,
-        url: convertFileSrc(currentVideo.path),
-        autoplay: true,
-        playsinline: true,
-        height: "100%",
-        width: "100%",
-        lang: "en",
-        volume: 0.8,
-        controls: [
-          "play",
-          "time",
-          "volume",
-          "fullscreen"
-        ],
-      });
+      setPlayerError(null);
+
+      // Use convertFileSrc for Tauri
+      const videoUrl = convertFileSrc(currentVideo.path);
+      console.log("Playing video:", videoUrl);
+
+      try {
+        playerInstanceRef.current = new Player({
+          el: playerRef.current,
+          url: videoUrl,
+          autoplay: true,
+          playsinline: true,
+          height: "100%",
+          width: "100%",
+          lang: "en",
+          volume: 0.8,
+          controls: [
+            "play",
+            "time",
+            "volume",
+            "fullscreen"
+          ],
+          errorTips: "Unable to play video. Please check if the file format is supported.",
+        });
+
+        playerInstanceRef.current.on("error", (err: any) => {
+          console.error("Player error:", err);
+          setPlayerError("Playback error. Format may not be supported.");
+        });
+      } catch (err) {
+        console.error("Failed to create player:", err);
+        setPlayerError("Failed to initialize player.");
+      }
     }
   }, [currentVideo]);
+
+  const loadSettings = async () => {
+    try {
+      const savedSettings = await invoke<Settings>("get_settings");
+      if (savedSettings) {
+        setSettings(savedSettings);
+      }
+    } catch (err) {
+      console.log("No saved settings, using defaults");
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      await invoke("save_settings", { settings });
+      setShowSettings(false);
+      // Re-check ffmpeg with new path
+      checkFfmpeg();
+    } catch (err) {
+      console.error("Failed to save settings:", err);
+    }
+  };
 
   const checkFfmpeg = async () => {
     try {
@@ -118,7 +168,6 @@ function App() {
   const handleAddVideo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Get metadata if ffmpeg is available
       let metadata: VideoMetadata | null = null;
       if (hasFfmpeg) {
         metadata = await getVideoMetadata(newVideo.path);
@@ -160,6 +209,27 @@ function App() {
       playerInstanceRef.current = null;
     }
     setCurrentVideo(null);
+    setPlayerError(null);
+  };
+
+  const handleSelectFfmpeg = async () => {
+    try {
+      const selected = await open({
+        directory: false,
+        multiple: false,
+        filters: [
+          {
+            name: "Executable",
+            extensions: process.platform === "win32" ? ["exe"] : [],
+          },
+        ],
+      });
+      if (selected) {
+        setSettings({ ...settings, ffmpegPath: selected as string });
+      }
+    } catch (err) {
+      console.error("Failed to select ffmpeg:", err);
+    }
   };
 
   const handleSelectFolder = async () => {
@@ -233,22 +303,77 @@ function App() {
           <h1 className="text-2xl font-bold text-blue-400">rustash</h1>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors"
+            >
+              ⚙️ Settings
+            </button>
+            <button
               onClick={() => setShowScanForm(!showScanForm)}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
             >
-              {showScanForm ? "Cancel" : "📁 Scan Folder"}
+              {showScanForm ? "Cancel" : "📁 Scan"}
             </button>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
             >
-              {showAddForm ? "Cancel" : "+ Add Video"}
+              {showAddForm ? "Cancel" : "+ Add"}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Video Player Modal with xgplayer */}
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-xl">
+            <h2 className="text-xl font-semibold mb-4">Settings</h2>
+
+            <div className="space-y-4">
+              {/* FFmpeg Path */}
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">FFmpeg Path</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={settings.ffmpegPath}
+                    onChange={(e) => setSettings({ ...settings, ffmpegPath: e.target.value })}
+                    className="flex-1 px-3 py-2 bg-gray-700 rounded border border-gray-600 focus:border-blue-500 outline-none"
+                    placeholder="Auto-detect if empty"
+                  />
+                  <button
+                    onClick={handleSelectFfmpeg}
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded transition-colors"
+                  >
+                    Browse
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {hasFfmpeg ? "✓ FFmpeg is available" : "✗ FFmpeg not found"}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveSettings}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Player Modal */}
       {currentVideo && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
           <div className="w-full max-w-5xl mx-4">
@@ -261,10 +386,20 @@ function App() {
                 ✕ Close
               </button>
             </div>
-            <div
-              ref={playerRef}
-              className="w-full aspect-video bg-black rounded-lg overflow-hidden"
-            />
+            {playerError ? (
+              <div className="w-full aspect-video bg-gray-800 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-400 text-lg mb-2">Playback Error</p>
+                  <p className="text-gray-400">{playerError}</p>
+                  <p className="text-gray-500 text-sm mt-2">Path: {currentVideo.path}</p>
+                </div>
+              </div>
+            ) : (
+              <div
+                ref={playerRef}
+                className="w-full aspect-video bg-black rounded-lg overflow-hidden"
+              />
+            )}
           </div>
         </div>
       )}
@@ -301,7 +436,6 @@ function App() {
               </div>
             </div>
 
-            {/* Scanned Files */}
             {scannedFiles.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -313,7 +447,7 @@ function App() {
                     disabled={importing}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded transition-colors"
                   >
-                    {importing ? "Importing..." : `Import Selected (${scannedFiles.length})`}
+                    {importing ? "Importing..." : `Import (${scannedFiles.length})`}
                   </button>
                 </div>
                 <div className="max-h-60 overflow-y-auto bg-gray-900 rounded p-2">
@@ -323,12 +457,7 @@ function App() {
                       className="flex items-center gap-2 py-1 hover:bg-gray-800 rounded px-2 cursor-pointer"
                       onClick={() => toggleFile(file.path)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        onChange={() => {}}
-                        className="accent-blue-500"
-                      />
+                      <input type="checkbox" checked={true} onChange={() => {}} className="accent-blue-500" />
                       <span className="truncate flex-1">{file.name}</span>
                       <span className="text-gray-500 text-sm">{formatSize(file.size)}</span>
                     </div>
@@ -343,10 +472,7 @@ function App() {
       {/* Add Form */}
       {showAddForm && (
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <form
-            onSubmit={handleAddVideo}
-            className="bg-gray-800 rounded-lg p-4 flex gap-4 items-end"
-          >
+          <form onSubmit={handleAddVideo} className="bg-gray-800 rounded-lg p-4 flex gap-4 items-end">
             <div className="flex-1">
               <label className="block text-sm text-gray-400 mb-1">Title</label>
               <input
@@ -368,21 +494,18 @@ function App() {
                 required
               />
             </div>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-            >
+            <button type="submit" className="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
               Add
             </button>
           </form>
         </div>
       )}
 
-      {/* ffmpeg status */}
+      {/* ffmpeg warning */}
       {!hasFfmpeg && (
         <div className="max-w-7xl mx-auto px-4 py-2">
           <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-3 text-yellow-200 text-sm">
-            ⚠️ ffmpeg not found. Install ffmpeg for automatic video metadata extraction.
+            ⚠️ FFmpeg not found. Click Settings to configure the path for metadata extraction.
           </div>
         </div>
       )}
@@ -393,15 +516,12 @@ function App() {
           <div className="text-center py-12 text-gray-500">Loading...</div>
         ) : videos.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            No videos yet. Click "Scan Folder" or "Add Video" to get started.
+            No videos yet. Click "Scan" or "Add" to get started.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {videos.map((video) => (
-              <div
-                key={video.id}
-                className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
-              >
+              <div key={video.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold truncate">{video.title}</h3>
@@ -417,12 +537,8 @@ function App() {
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
                   <span>{formatSize(video.size)}</span>
-                  {video.width && video.height && (
-                    <span>{video.width} × {video.height}</span>
-                  )}
-                  {video.duration && (
-                    <span>{Math.floor(video.duration / 60)}:{String(Math.floor(video.duration % 60)).padStart(2, "0")}</span>
-                  )}
+                  {video.width && video.height && <span>{video.width} × {video.height}</span>}
+                  {video.duration && <span>{Math.floor(video.duration / 60)}:{String(Math.floor(video.duration % 60)).padStart(2, "0")}</span>}
                 </div>
                 <button
                   onClick={() => handlePlayVideo(video)}

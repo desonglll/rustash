@@ -52,6 +52,18 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), Box<dyn std::error:
     .execute(pool)
     .await?;
 
+    // Create settings table
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
     log::info!("Migrations completed");
     Ok(())
 }
