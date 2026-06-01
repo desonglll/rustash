@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect, useRef } from "react";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface Video {
   id: number;
@@ -21,12 +20,23 @@ interface ScannedFile {
   size: number;
 }
 
+interface VideoMetadata {
+  duration: number | null;
+  width: number | null;
+  height: number | null;
+  codec: string | null;
+  bitrate: number | null;
+}
+
 function App() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showScanForm, setShowScanForm] = useState(false);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [hasFfmpeg, setHasFfmpeg] = useState(false);
+  const playerRef = useRef<HTMLDivElement>(null);
+  const playerInstanceRef = useRef<Player | null>(null);
   const [newVideo, setNewVideo] = useState({ title: "", path: "" });
   const [scanPath, setScanPath] = useState("");
   const [scannedFiles, setScannedFiles] = useState<ScannedFile[]>([]);
@@ -35,7 +45,55 @@ function App() {
 
   useEffect(() => {
     loadVideos();
+    checkFfmpeg();
   }, []);
+
+  // Cleanup player on unmount
+  useEffect(() => {
+    return () => {
+      if (playerInstanceRef.current) {
+        playerInstanceRef.current.destroy();
+      }
+    };
+  }, []);
+
+  // Initialize player when currentVideo changes
+  useEffect(() => {
+    if (currentVideo && playerRef.current) {
+      // Destroy existing player
+      if (playerInstanceRef.current) {
+        playerInstanceRef.current.destroy();
+      }
+
+      // Create new player with xgplayer
+      playerInstanceRef.current = new Player({
+        el: playerRef.current,
+        url: convertFileSrc(currentVideo.path),
+        autoplay: true,
+        playsinline: true,
+        height: "100%",
+        width: "100%",
+        lang: "en",
+        volume: 0.8,
+        controls: [
+          "play",
+          "time",
+          "volume",
+          "fullscreen"
+        ],
+      });
+    }
+  }, [currentVideo]);
+
+  const checkFfmpeg = async () => {
+    try {
+      const available = await invoke<boolean>("check_ffmpeg");
+      setHasFfmpeg(available);
+    } catch (err) {
+      console.error("Failed to check ffmpeg:", err);
+      setHasFfmpeg(false);
+    }
+  };
 
   const loadVideos = async () => {
     try {
@@ -48,13 +106,31 @@ function App() {
     }
   };
 
+  const getVideoMetadata = async (path: string): Promise<VideoMetadata | null> => {
+    try {
+      return await invoke<VideoMetadata>("get_video_metadata", { path });
+    } catch (err) {
+      console.error("Failed to get metadata:", err);
+      return null;
+    }
+  };
+
   const handleAddVideo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Get metadata if ffmpeg is available
+      let metadata: VideoMetadata | null = null;
+      if (hasFfmpeg) {
+        metadata = await getVideoMetadata(newVideo.path);
+      }
+
       await invoke("add_video", {
         input: {
           title: newVideo.title,
           path: newVideo.path,
+          duration: metadata?.duration ?? null,
+          width: metadata?.width ?? null,
+          height: metadata?.height ?? null,
         },
       });
       setNewVideo({ title: "", path: "" });
@@ -79,6 +155,10 @@ function App() {
   };
 
   const handleClosePlayer = () => {
+    if (playerInstanceRef.current) {
+      playerInstanceRef.current.destroy();
+      playerInstanceRef.current = null;
+    }
     setCurrentVideo(null);
   };
 
@@ -168,7 +248,7 @@ function App() {
         </div>
       </header>
 
-      {/* Video Player Modal */}
+      {/* Video Player Modal with xgplayer */}
       {currentVideo && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
           <div className="w-full max-w-5xl mx-4">
@@ -181,15 +261,10 @@ function App() {
                 ✕ Close
               </button>
             </div>
-            <video
-              key={currentVideo.id}
-              src={convertFileSrc(currentVideo.path)}
-              controls
-              autoPlay
-              className="w-full rounded-lg bg-black"
-            >
-              Your browser does not support video playback.
-            </video>
+            <div
+              ref={playerRef}
+              className="w-full aspect-video bg-black rounded-lg overflow-hidden"
+            />
           </div>
         </div>
       )}
@@ -300,6 +375,15 @@ function App() {
               Add
             </button>
           </form>
+        </div>
+      )}
+
+      {/* ffmpeg status */}
+      {!hasFfmpeg && (
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <div className="bg-yellow-900/50 border border-yellow-700 rounded-lg p-3 text-yellow-200 text-sm">
+            ⚠️ ffmpeg not found. Install ffmpeg for automatic video metadata extraction.
+          </div>
         </div>
       )}
 

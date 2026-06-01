@@ -3,10 +3,12 @@ mod db;
 mod models;
 mod schema;
 mod scanner;
+mod ffmpeg;
 
 use db::{create_db_pool, init_database};
 use models::{CreateTagInput, CreateVideoInput, Video, Tag};
 use scanner::{ScanResult, extract_title};
+use ffmpeg::VideoMetadata;
 use tauri::Manager;
 
 pub type DbPool = db::DbPool;
@@ -179,6 +181,18 @@ async fn import_scanned_files(pool: tauri::State<'_, DbPool>, files: Vec<String>
     Ok(imported)
 }
 
+/// Get video metadata using ffprobe
+#[tauri::command]
+fn get_video_metadata(path: String) -> Result<VideoMetadata, String> {
+    ffmpeg::get_video_metadata(&path)
+}
+
+/// Check if ffmpeg is available
+#[tauri::command]
+fn check_ffmpeg() -> bool {
+    ffmpeg::is_ffmpeg_available()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     env_logger::init();
@@ -211,7 +225,9 @@ pub fn run() {
             add_tag_to_video,
             remove_tag_from_video,
             scan_directory,
-            import_scanned_files
+            import_scanned_files,
+            get_video_metadata,
+            check_ffmpeg
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
