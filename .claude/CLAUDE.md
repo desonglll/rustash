@@ -1,117 +1,118 @@
-# Rustash 项目指南
+# Rustash Project Guide
 
-## 项目概述
+## Overview
 
-Rustash 是 [stashapp/stash](https://github.com/stashapp/stash) 的重构版本，使用 Tauri v2 + Rust + React + TailwindCSS 技术栈替代原有的 Go + React + Bootstrap 方案。
+Rustash is a rewrite of [stashapp/stash](https://github.com/stashapp/stash) using Tauri v2 + Rust + React + TailwindCSS instead of the original Go + React + Bootstrap stack.
 
-原始 stash 代码位于 `stash/` 目录（通过符号链接），当前 rustash 是一个全新的 Tauri v2 脚手架项目。
+The original stash code is located in the `stash/` directory (via symlink) for reference only. The current rustash project is a fresh Tauri v2 scaffold.
 
-## 技术栈
+## Tech Stack
 
-| 层 | 技术 |
-|---|------|
-| 桌面框架 | Tauri v2 |
-| 后端 | Rust (src-tauri/) |
-| 前端 | React 18 + TypeScript |
-| 样式 | TailwindCSS v4 |
-| 构建 | Vite 6 + bun |
-| 数据库 | SQLite (via rusqlite/diesel) |
-| API | Tauri Commands (非 GraphQL) |
+| Layer | Technology |
+|-------|------------|
+| Desktop Framework | Tauri v2 |
+| Backend | Rust (src-tauri/) |
+| Frontend | React 18 + TypeScript |
+| Styling | TailwindCSS v4 |
+| Build | Vite 6 + bun |
+| Database | SQLite (via rusqlite/diesel) |
+| API | Tauri Commands (not GraphQL) |
 
-## 核心原则
+## Core Principles
 
-1. **最小变更原则**：每个 PR 只做一件事，代码量尽可能少
-2. **正确性优先**：每步都确保编译通过、无 bug
-3. **渐进式重构**：先搭骨架再填充功能，按层次逐步实现
-4. **参考不照搬**：理解 stash 的架构意图，用 Rust 惯用方式重新实现
+1. **Minimal-change principle**: Each PR does exactly one thing, with the fewest lines of code possible
+2. **Correctness first**: Every step must compile and run without bugs
+3. **Incremental rewrite**: Build the skeleton first, then fill in features layer by layer
+4. **Reference, don't copy**: Understand stash's architectural intent, reimplement using Rust idioms
 
-## 项目结构
+## Project Structure
 
 ```
 rustash/
-├── stash/                  # 原始 stash 项目（符号链接，仅参考）
-├── src/                    # React 前端源码
-├── src-tauri/              # Rust 后端源码
+├── stash/                  # Original stash project (symlink, reference only)
+├── src/                    # React frontend source
+├── src-tauri/              # Rust backend source
 │   └── src/
 │       ├── main.rs
 │       ├── lib.rs
 │       ├── commands/       # Tauri commands
-│       ├── db/             # 数据库层
-│       ├── models/         # 数据模型
-│       ├── services/       # 业务逻辑
-│       └── config/         # 配置管理
-├── docs/                   # 项目文档
-│   ├── plan.md             # 详细任务规划
-│   └── architecture.md     # 架构设计
+│       ├── db/             # Database layer
+│       ├── models/         # Data models
+│       ├── services/       # Business logic
+│       └── config/         # Configuration management
+├── docs/                   # Project documentation
+│   ├── plan.md             # Detailed task plan
+│   └── architecture.md     # Architecture design
 └── .claude/
-    ├── CLAUDE.md           # 本文件
-    └── settings.json       # Claude Code 设置
+    ├── CLAUDE.md           # This file
+    └── settings.json       # Claude Code settings
 ```
 
-## 开发命令
+## Development Commands
 
 ```bash
-bun install              # 安装前端依赖
-bun run dev              # 启动开发服务器
-bun run tauri dev        # 启动 Tauri 开发模式
-bun run build            # 构建前端
-bun run tauri build      # 构建生产包
-cd src-tauri && cargo test  # 运行 Rust 测试
+bun install              # Install frontend dependencies
+bun run dev              # Start dev server
+bun run tauri dev        # Start Tauri dev mode
+bun run build            # Build frontend
+bun run tauri build      # Build production package
+cd src-tauri && cargo test  # Run Rust tests
 cd src-tauri && cargo clippy # Rust lint
 ```
 
-## 重构策略
+## Rewrite Strategy
 
-### 阶段划分
+### Phase Breakdown
 
-1. **Phase 0: 基础设施** - 项目配置、依赖、构建流程
-2. **Phase 1: 前端骨架** - 路由、布局、主题系统
-3. **Phase 2: 数据库层** - SQLite schema、migrations、models
-4. **Phase 3: 核心功能** - 场景管理（CRUD）、文件扫描
-5. **Phase 4: 扩展功能** - 标签、演员、工作室、图库
-6. **Phase 5: 高级功能** - 抓取器、插件系统、DLNA
-7. **Phase 6: 打磨** - 性能优化、国际化、测试覆盖
+1. **Phase 0: Infrastructure** — Project config, dependencies, build pipeline
+2. **Phase 1: Frontend Skeleton** — Routing, layout, theme system
+3. **Phase 2: Database Layer** — SQLite schema, migrations, models
+4. **Phase 3: Core Features** — Scene management (CRUD), file scanning
+5. **Phase 4: Extended Entities** — Tags, performers, studios, galleries
+6. **Phase 5: Advanced Features** — Scrapers, plugin system, DLNA
+7. **Phase 6: Polish** — Performance optimization, i18n, test coverage
 
-### stash 功能模块对照
+### Stash Feature Module Mapping
 
-| stash 模块 | 说明 | 优先级 |
-|-----------|------|--------|
-| Scene 管理 | 场景/视频 CRUD、浏览、搜索 | P0 |
-| File 扫描 | 文件系统扫描、入库 | P0 |
-| Performer | 演员管理 | P1 |
-| Studio | 工作室管理 | P1 |
-| Tag | 标签管理 | P1 |
-| Gallery | 图库管理 | P1 |
-| Config | 配置管理 | P0 |
-| Auth | 认证系统 | P1 |
-| Scrapers | 抓取器 | P2 |
-| Plugins | 插件系统 | P2 |
-| DLNA | 流媒体 | P2 |
-| Auto-tag | 自动标签 | P2 |
-| FFmpeg | 转码、缩略图 | P1 |
-| Identify | 场景识别 | P2 |
+| Stash Module | Description | Priority |
+|-------------|-------------|----------|
+| Scene Management | Scene/video CRUD, browsing, search | P0 |
+| File Scanning | Filesystem scanning, ingestion | P0 |
+| Performer | Performer management | P1 |
+| Studio | Studio management | P1 |
+| Tag | Tag management | P1 |
+| Gallery | Gallery management | P1 |
+| Config | Configuration management | P0 |
+| Auth | Authentication system | P1 |
+| Scrapers | Web scrapers | P2 |
+| Plugins | Plugin system | P2 |
+| DLNA | Media streaming | P2 |
+| Auto-tag | Automatic tagging | P2 |
+| FFmpeg | Transcoding, thumbnails | P1 |
+| Identify | Scene identification | P2 |
 
-### API 设计策略
+### API Design Strategy
 
-stash 使用 GraphQL，rustash 使用 Tauri Commands。对照关系：
+Stash uses GraphQL; rustash uses Tauri Commands. The mapping is:
 
-- GraphQL Query → Tauri Command (只读)
-- GraphQL Mutation → Tauri Command (写操作)
-- GraphQL Subscription → Tauri Event (事件推送)
+- GraphQL Query → Tauri Command (read-only)
+- GraphQL Mutation → Tauri Command (write operation)
+- GraphQL Subscription → Tauri Event (event push)
 
-命名规则：`#[tauri::command]` 函数使用 snake_case，前端调用使用 camelCase（Tauri 自动转换）。
+Naming convention: `#[tauri::command]` functions use snake_case; frontend calls use camelCase (Tauri auto-converts).
 
-## 前端架构（参考 stash 重设计）
+## Frontend Architecture (Redesigned from stash)
 
-- 路由：React Router v6（与 stash 一致）
-- 状态管理：Zustand（轻量，替代 Apollo Client 的本地缓存）
-- UI 组件：Headless UI + TailwindCSS（替代 Bootstrap + react-bootstrap）
-- 视频播放：video.js 或 hls.js
-- 国际化：i18next（与 stash 一致）
+- Routing: React Router v6 (consistent with stash)
+- State Management: Zustand (lightweight, replaces Apollo Client's local cache)
+- UI Components: Headless UI + TailwindCSS (replaces Bootstrap + react-bootstrap)
+- Video Playback: video.js or hls.js
+- Internationalization: i18next (consistent with stash)
 
-## 注意事项
+## Notes
 
-- `stash/` 目录是符号链接，只读参考，不要修改
-- 每次提交前确保 `cargo clippy` 和 `bun run build` 都通过
-- Tauri v2 的权限系统需要在 capabilities/ 中配置
-- SQLite 在 Tauri 中需要使用 bundled feature 编译
+- The `stash/` directory is a symlink — read-only reference, do not modify
+- Before each commit, ensure both `cargo clippy` and `bun run build` pass
+- Tauri v2's permission system needs to be configured in capabilities/
+- SQLite in Tauri requires using the bundled feature for compilation
+- All documentation must be written in English

@@ -1,6 +1,6 @@
-# Rustash 架构设计
+# Rustash Architecture Design
 
-## 整体架构
+## Overall Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -32,60 +32,60 @@
 └─────────────────────────────────────────────┘
 ```
 
-## 分层职责
+## Layer Responsibilities
 
 ### Frontend Layer
 
-| 模块 | 职责 |
-|------|------|
-| Pages | 路由页面组件 |
-| Components | 可复用 UI 组件 |
-| Stores | Zustand 全局状态 |
-| Hooks | 自定义 React Hooks |
-| Utils | 工具函数 |
-| Types | TypeScript 类型定义 |
-| Locales | 国际化资源 |
+| Module | Responsibility |
+|--------|---------------|
+| Pages | Route page components |
+| Components | Reusable UI components |
+| Stores | Zustand global state |
+| Hooks | Custom React Hooks |
+| Utils | Utility functions |
+| Types | TypeScript type definitions |
+| Locales | Internationalization resources |
 
 ### Rust Backend Layer
 
-| 模块 | 职责 |
-|------|------|
-| commands/ | Tauri Command 处理器（薄层，参数校验 + 调用 service） |
-| services/ | 业务逻辑层（事务编排、权限检查） |
-| db/ | 数据库访问层（SQLite 连接池、migration、CRUD） |
-| models/ | 领域模型（纯数据结构 + serde） |
-| config/ | 配置管理（YAML 读写） |
+| Module | Responsibility |
+|--------|---------------|
+| commands/ | Tauri Command handlers (thin layer, param validation + service dispatch) |
+| services/ | Business logic layer (transaction orchestration, permission checks) |
+| db/ | Database access layer (SQLite connection pool, migrations, CRUD) |
+| models/ | Domain models (pure data structures + serde) |
+| config/ | Configuration management (YAML read/write) |
 
-## 数据流
+## Data Flow
 
-### 读取数据
+### Read Data
 ```
-Frontend → invoke("scene_list", filters) → Command → Service → Repo → SQLite → 返回 Vec<Scene>
-```
-
-### 写入数据
-```
-Frontend → invoke("scene_update", data) → Command → Service → Repo → SQLite → 返回 Scene
+Frontend → invoke("scene_list", filters) → Command → Service → Repo → SQLite → returns Vec<Scene>
 ```
 
-### 事件推送（替代 GraphQL Subscription）
+### Write Data
+```
+Frontend → invoke("scene_update", data) → Command → Service → Repo → SQLite → returns Scene
+```
+
+### Event Push (replaces GraphQL Subscription)
 ```
 Rust Backend → app.emit("scan_progress", payload) → Frontend listen("scan_progress", callback)
 ```
 
-## 数据库设计
+## Database Design
 
-### 核心表（参考 stash schema v85，简化）
+### Core Tables (simplified from stash schema v85)
 
 ```sql
--- 文件系统
+-- Filesystem
 files (id, basename, parent_folder_id, size, mod_time, created_at, updated_at)
 folders (id, path, parent_folder_id, mod_time, created_at, updated_at)
 
--- 核心实体
+-- Core entities
 scenes (id, title, details, url, date, rating, organized, studio_id,
         created_at, updated_at)
-scene_files (scene_id, file_id)  -- 多对多
+scene_files (scene_id, file_id)  -- many-to-many
 scene_markers (id, scene_id, title, seconds, primary_tag_id, created_at, updated_at)
 
 performers (id, name, disambiguation, gender, url, birthdate, ethnicity,
@@ -107,7 +107,7 @@ image_files (image_id, file_id)
 groups (id, name, aliases, duration, date, rating, studio_id, director,
         synopsis, created_at, updated_at)
 
--- 关联表
+-- Join tables
 scenes_performers (scene_id, performer_id)
 scenes_tags (scene_id, tag_id)
 scenes_groups (scene_id, group_id)
@@ -118,20 +118,20 @@ galleries_scenes (gallery_id, scene_id)
 images_tags (image_id, tag_id)
 images_performers (image_id, performer_id)
 
--- 其他
+-- Other
 saved_filters (id, mode, name, filter_json, created_at, updated_at)
 config (key TEXT PRIMARY KEY, value TEXT)
 ```
 
-### Migration 策略
+### Migration Strategy
 
-- 使用嵌入式 SQL 文件，按序号命名：`001_initial.sql`, `002_add_xxx.sql`
-- 应用启动时检查当前版本并自动执行未应用的 migration
-- 版本记录在 `schema_migrations` 表中
+- Use embedded SQL files, numbered sequentially: `001_initial.sql`, `002_add_xxx.sql`
+- On startup, check current version and auto-execute unapplied migrations
+- Version tracking in `schema_migrations` table
 
-## Tauri Commands 设计
+## Tauri Commands Design
 
-### 通用模式
+### General Pattern
 
 ```rust
 #[tauri::command]
@@ -147,23 +147,23 @@ async fn scene_list(
 }
 ```
 
-### 命名规范
+### Naming Convention
 
-| 操作 | 命名 | 示例 |
-|------|------|------|
-| 列表 | `{entity}_list` | `scene_list` |
-| 单个查询 | `{entity}_find` | `scene_find` |
-| 创建 | `{entity}_create` | `scene_create` |
-| 更新 | `{entity}_update` | `scene_update` |
-| 删除 | `{entity}_destroy` | `scene_destroy` |
-| 统计 | `{entity}_count` | `scene_count` |
+| Operation | Pattern | Example |
+|-----------|---------|---------|
+| List | `{entity}_list` | `scene_list` |
+| Find by ID | `{entity}_find` | `scene_find` |
+| Create | `{entity}_create` | `scene_create` |
+| Update | `{entity}_update` | `scene_update` |
+| Delete | `{entity}_destroy` | `scene_destroy` |
+| Count | `{entity}_count` | `scene_count` |
 
-## 前端组件架构
+## Frontend Component Architecture
 
-### 页面路由
+### Page Routes
 
 ```
-/                    → FrontPage (仪表盘)
+/                    → FrontPage (dashboard)
 /scenes              → SceneList
 /scenes/:id          → SceneDetail
 /scenes/:id/edit     → SceneEdit
@@ -184,7 +184,7 @@ async fn scene_list(
 ### Zustand Stores
 
 ```typescript
-// 设置 store
+// Settings store
 interface SettingsStore {
   theme: 'dark' | 'light';
   language: string;
@@ -198,7 +198,7 @@ interface UIStore {
   setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
-// 实体 store (按需)
+// Entity store (per-entity)
 interface SceneStore {
   scenes: Scene[];
   totalCount: number;
@@ -209,14 +209,14 @@ interface SceneStore {
 }
 ```
 
-## 与 stash 的关键差异
+## Key Differences from stash
 
-| 方面 | stash | rustash |
-|------|-------|---------|
-| 通信方式 | GraphQL over HTTP | Tauri IPC |
-| 状态管理 | Apollo Client cache | Zustand |
-| UI 框架 | Bootstrap | TailwindCSS + Headless UI |
-| 桌面集成 | Systray + 浏览器 | Tauri 窗口 |
-| 插件运行时 | goja (JS) | WASM (未来) |
-| 数据库访问 | go-sqlite3 (CGO) | rusqlite (bundled) |
-| 流媒体 | HLS via FFmpeg | 同左 (逐步实现) |
+| Aspect | stash | rustash |
+|--------|-------|---------|
+| Communication | GraphQL over HTTP | Tauri IPC |
+| State Management | Apollo Client cache | Zustand |
+| UI Framework | Bootstrap | TailwindCSS + Headless UI |
+| Desktop Integration | Systray + browser | Tauri window |
+| Plugin Runtime | goja (JS) | WASM (future) |
+| Database Access | go-sqlite3 (CGO) | rusqlite (bundled) |
+| Streaming | HLS via FFmpeg | Same (incremental) |
