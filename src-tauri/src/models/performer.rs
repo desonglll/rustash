@@ -1,0 +1,51 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Performer {
+    pub id: i64,
+    pub name: String,
+    pub disambiguation: Option<String>,
+    pub gender: Option<String>,
+    pub url: Option<String>,
+    pub birthdate: Option<String>,
+    pub ethnicity: Option<String>,
+    pub country: Option<String>,
+    pub eye_color: Option<String>,
+    pub height: Option<i64>,
+    pub measurements: Option<String>,
+    pub fake_tits: Option<String>,
+    pub tattoos: Option<String>,
+    pub piercings: Option<String>,
+    pub favorite: bool,
+    pub career_length: Option<String>,
+    pub details: Option<String>,
+    pub death_date: Option<String>,
+    pub hair_color: Option<String>,
+    pub weight: Option<i64>,
+    pub rating: Option<i64>,
+    pub ignore_auto_tag: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformerCreate {
+    pub name: String,
+    pub disambiguation: Option<String>,
+    pub gender: Option<String>,
+    pub url: Option<String>,
+    pub birthdate: Option<String>,
+    pub ethnicity: Option<String>,
+    pub country: Option<String>,
+    pub eye_color: Option<String>,
+    pub height: Option<i64>,
+    pub measurements: Option<String>,
+    pub fake_tits: Option<String>,
+    pub tattoos: Option<String>,
+    pub piercings: Option<String>,
+    pub career_length: Option<String>,
+    pub details: Option<String>,
+    pub death_date: Option<String>,
+    pub hair_color: Option<String>,
+    pub weight: Option<i64>,
+}
