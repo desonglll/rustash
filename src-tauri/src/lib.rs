@@ -23,7 +23,14 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::scene_commands::scene_list,
+            commands::scene_commands::scene_find,
+            commands::scene_commands::scene_create,
+            commands::scene_commands::scene_update,
+            commands::scene_commands::scene_destroy,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
