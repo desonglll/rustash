@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/layout/MainLayout";
 import FrontPage from "@/pages/FrontPage";
 import ScenesPage from "@/pages/ScenesPage";
+import SceneDetailPage from "@/pages/SceneDetailPage";
+import SceneEditPage from "@/pages/SceneEditPage";
 import PerformersPage from "@/pages/PerformersPage";
 import StudiosPage from "@/pages/StudiosPage";
 import TagsPage from "@/pages/TagsPage";
@@ -17,6 +19,9 @@ function App() {
         <Routes>
           <Route path="/" element={<FrontPage />} />
           <Route path="/scenes" element={<ScenesPage />} />
+          <Route path="/scenes/:id" element={<SceneDetailPage />} />
+          <Route path="/scenes/:id/edit" element={<SceneEditPage />} />
+          <Route path="/scenes/new" element={<SceneEditPage />} />
           <Route path="/performers" element={<PerformersPage />} />
           <Route path="/studios" element={<StudiosPage />} />
           <Route path="/tags" element={<TagsPage />} />
