@@ -30,6 +30,10 @@ pub fn run() {
             commands::scene_commands::scene_create,
             commands::scene_commands::scene_update,
             commands::scene_commands::scene_destroy,
+            commands::tag_commands::tag_list,
+            commands::tag_commands::tag_find,
+            commands::tag_commands::tag_create,
+            commands::tag_commands::tag_destroy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
