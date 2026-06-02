@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Scene, SceneCreate, SceneUpdate, PaginatedResult, Tag, TagCreate } from "@/types";
+import type { Scene, SceneCreate, SceneUpdate, PaginatedResult, Tag, TagCreate, Studio, StudioCreate } from "@/types";
 
 // Scene API
 
@@ -42,4 +42,22 @@ export async function createTag(input: TagCreate): Promise<Tag> {
 
 export async function deleteTag(id: number): Promise<boolean> {
   return invoke("tag_destroy", { id });
+}
+
+// Studio API
+
+export async function fetchStudios(): Promise<Studio[]> {
+  return invoke("studio_list");
+}
+
+export async function fetchStudio(id: number): Promise<Studio | null> {
+  return invoke("studio_find", { id });
+}
+
+export async function createStudio(input: StudioCreate): Promise<Studio> {
+  return invoke("studio_create", { input });
+}
+
+export async function deleteStudio(id: number): Promise<boolean> {
+  return invoke("studio_destroy", { id });
 }
