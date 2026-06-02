@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS performers (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    disambiguation TEXT,
+    gender TEXT,
+    url TEXT,
+    birthdate TEXT,
+    ethnicity TEXT,
+    country TEXT,
+    eye_color TEXT,
+    height INTEGER,
+    measurements TEXT,
+    fake_tits TEXT,
+    tattoos TEXT,
+    piercings TEXT,
+    favorite INTEGER NOT NULL DEFAULT 0,
+    career_length TEXT,
+    details TEXT,
+    death_date TEXT,
+    hair_color TEXT,
+    weight INTEGER,
+    rating INTEGER,
+    ignore_auto_tag INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE UNIQUE INDEX idx_performers_name ON performers(name);
