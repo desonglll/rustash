@@ -3,6 +3,12 @@ import type { Scene, SceneCreate, SceneUpdate, PaginatedResult, Tag, TagCreate }
 
 // Scene API
 export async function fetchScenes(page = 1, perPage = 25): Promise<PaginatedResult<Scene>> {
+import type { Scene, SceneCreate, SceneUpdate, PaginatedResult } from "@/types";
+
+export async function fetchScenes(
+  page = 1,
+  perPage = 25
+): Promise<PaginatedResult<Scene>> {
   return invoke("scene_list", { page, perPage });
 }
 
