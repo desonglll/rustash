@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "scenes": "Scenes",
+    "performers": "Performers",
+    "studios": "Studios",
+    "tags": "Tags",
+    "galleries": "Galleries",
+    "images": "Images",
+    "groups": "Groups",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search"
+  }
+}

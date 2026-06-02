@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "scenes": "场景",
+    "performers": "演员",
+    "studios": "工作室",
+    "tags": "标签",
+    "galleries": "图库",
+    "images": "图片",
+    "groups": "合集",
+    "settings": "设置"
+  },
+  "common": {
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "创建",
+    "search": "搜索"
+  }
+}
