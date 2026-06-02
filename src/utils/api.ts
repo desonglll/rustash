@@ -2,8 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Scene, SceneCreate, SceneUpdate, PaginatedResult, Tag, TagCreate } from "@/types";
 
 // Scene API
-export async function fetchScenes(page = 1, perPage = 25): Promise<PaginatedResult<Scene>> {
-import type { Scene, SceneCreate, SceneUpdate, PaginatedResult } from "@/types";
 
 export async function fetchScenes(
   page = 1,
@@ -29,6 +27,7 @@ export async function deleteScene(id: number): Promise<boolean> {
 }
 
 // Tag API
+
 export async function fetchTags(): Promise<Tag[]> {
   return invoke("tag_list");
 }
