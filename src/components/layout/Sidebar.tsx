@@ -1,3 +1,5 @@
+import { Link, useLocation } from "react-router-dom";
+
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
@@ -15,6 +17,8 @@ const navItems = [
 ];
 
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
+  const location = useLocation();
+
   return (
     <aside
       className={`bg-gray-900 text-gray-100 flex flex-col transition-all duration-200 ${
@@ -23,7 +27,9 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       <div className="flex items-center justify-between h-14 px-3 border-b border-gray-700">
         {!collapsed && (
-          <span className="text-lg font-bold tracking-wide">Rustash</span>
+          <Link to="/" className="text-lg font-bold tracking-wide hover:text-white">
+            Rustash
+          </Link>
         )}
         <button
           onClick={onToggle}
@@ -35,14 +41,18 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
       <nav className="flex-1 py-2 space-y-0.5">
         {navItems.map((item) => (
-          <a
+          <Link
             key={item.href}
-            href={item.href}
-            className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-800 hover:text-white rounded mx-1"
+            to={item.href}
+            className={`flex items-center gap-3 px-3 py-2 text-sm rounded mx-1 ${
+              location.pathname === item.href
+                ? "bg-gray-700 text-white"
+                : "hover:bg-gray-800 hover:text-white"
+            }`}
           >
             <span className="text-base">{item.icon}</span>
             {!collapsed && <span>{item.label}</span>}
-          </a>
+          </Link>
         ))}
       </nav>
     </aside>
